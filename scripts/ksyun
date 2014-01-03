@@ -30,7 +30,6 @@ git clone https://github.com/javagg/puppet-openshift_freequant.git
 puppet module install puppetlabs-ntp -i $PMODULES
 ln -sf ../puppet-openshift_origin ${PMODULES}/openshift_origin
 ln -sf ../puppet-openshift_freequant ${PMODULES}/openshift_freequant
-popd > /dev/null
 
 ppfile=${work_dir}/configure_node.pp
 
@@ -39,12 +38,13 @@ class {'openshift_freequant':
   domain => $::domain,
   node_hostname => $::fqdn,
   freequant_repo_base => 'http://freequant-rpm.u.qiniudn.com',
-  mq_url => "mqtt://jbzntfyw:RaGCg8bXjcq7@m10.cloudmqtt.com:15111",
+  node_mq_url => "mqtt://jbzntfyw:RaGCg8bXjcq7@m10.cloudmqtt.com:15111",
 }
 EOF
 
-cmd="puppet apply ./configure_node.pp --modulepath pmodules --debug"
+cmd="puppet apply ${ppfile} --modulepath ${PMODULES} --debug"
 echo $cmd
-cmd
+$cmd
 
+popd > /dev/null
 
