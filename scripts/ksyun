@@ -1,0 +1,50 @@
+#!/bin/bash
+
+if [ $(id -u) != "0" ]; then
+  echo "Need root to run this script"
+  exit 1
+fi
+
+function package_installed {
+  rpm -q "$1" >/dev/null && return 0 || return 1
+}
+
+`package_installed "epel-release"` || rpm -Uvh http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
+yum install -y puppet git
+
+# Perpare selinux
+yum install -y selinux-policy-targeted policycoreutils-python
+
+# Update system (to latest)
+yum update -y
+
+work_dir=${HOME}/fq-install
+mkdir -p ${work_dir}
+
+pushd ${work_dir} > /dev/null
+PMODULES="pmodules"
+mkdir -p $PMODULES
+rm -rf $PMODULES/{puppet-openshift_origin,puppet-openshift_freequant}
+git clone https://github.com/openshift/puppet-openshift_origin.git
+git clone https://github.com/javagg/puppet-openshift_freequant.git
+puppet module install puppetlabs-ntp -i $PMODULES
+ln -sf ../puppet-openshift_origin ${PMODULES}/openshift_origin
+ln -sf ../puppet-openshift_freequant ${PMODULES}/openshift_freequant
+popd > /dev/null
+
+ppfile=${work_dir}/configure_node.pp
+
+cat > $ppfile <<EOF
+class {'openshift_freequant':
+  domain => $::domain,
+  node_hostname => $::fqdn,
+  freequant_repo_base => 'http://freequant-rpm.u.qiniudn.com',
+  mq_url => "mqtt://jbzntfyw:RaGCg8bXjcq7@m10.cloudmqtt.com:15111",
+}
+EOF
+
+cmd="puppet apply ./configure_node.pp --modulepath pmodules --debug"
+echo $cmd
+cmd
+
+
